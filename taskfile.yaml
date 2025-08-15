@@ -4,6 +4,8 @@ tasks:
   build:
     sources:
       - src/**.zig
+      - ./build.zig
+      - ./build.zig.zon
     generates:
       - ./zig-out/bin/todo_zen
     cmds:
