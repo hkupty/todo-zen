@@ -117,7 +117,7 @@ pub fn main() !void {
     defer dirWalker.deinit();
     while (try dirWalker.next()) |entry| {
         // NOTE: Revisit blocking all the hidden files
-        if (entry.kind == .directory and std.mem.startsWith(u8, entry.path, ".")) {
+        if (entry.kind == .directory and std.mem.startsWith(u8, entry.basename, ".")) {
             dirWalker.skip();
             continue;
         }
