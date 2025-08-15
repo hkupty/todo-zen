@@ -6,66 +6,43 @@ const variants = [_][]const u8{ "TODO", "HACK", "NOTE", "PERF", "FIX", "FIXME" }
 const TodoIterator = struct {
     reader: std.fs.File.Reader,
     allocator: std.mem.Allocator,
-    remaining: [256]u8 = undefined,
-    startIx: usize = 0,
-    endIx: usize = 0,
+    commentBuffer: std.ArrayList(u8),
 
-    /// Returns all lines from a file
-    fn readLines(self: *TodoIterator) !?[]u8 {
+    fn readCommentsDirect(self: *TodoIterator) !?[]u8 {
         var buffer: [256]u8 = undefined;
-        var lineBuffer = try std.ArrayList(u8).initCapacity(self.allocator, 256);
-        defer lineBuffer.deinit();
-
-        if (self.startIx != self.endIx) {
-            if (std.mem.indexOf(u8, self.remaining[self.startIx..self.endIx], "\n")) |linebreakOffset| {
-                const linebreakIndex = self.startIx + linebreakOffset;
-                std.debug.assert(linebreakIndex <= self.endIx);
-                const oldStart = self.startIx;
-                self.startIx = linebreakIndex + 1;
-                return try self.allocator.dupe(u8, self.remaining[oldStart..linebreakIndex]);
-            }
-
-            lineBuffer.appendSliceAssumeCapacity(self.remaining[self.startIx..self.endIx]);
-        }
 
         while (true) {
-            const amt = try self.reader.readAll(&buffer);
-            if (amt == 0) break;
-
-            if (std.mem.indexOf(u8, &buffer, "\n")) |linebreakIndex| {
-                try lineBuffer.appendSlice(buffer[0..linebreakIndex]);
-                @memcpy(&self.remaining, &buffer);
-                self.startIx = linebreakIndex + 1;
-                self.endIx = amt;
-                return try lineBuffer.toOwnedSlice();
-            } else {
-                try lineBuffer.appendSlice(&buffer);
-            }
-        }
-
-        if (lineBuffer.items.len > 0) {
-            self.startIx = 0;
-            self.endIx = 0;
-            return try lineBuffer.toOwnedSlice();
-        }
-
-        return null;
-    }
-
-    /// Return only the comments, filtering them out from regular lines
-    fn readComments(self: *TodoIterator) !?[]u8 {
-        while (try self.readLines()) |line| {
-            if (std.mem.indexOf(u8, line, "//")) |index| {
-                if (index == 0 or std.ascii.isWhitespace(line[index - 1])) {
-                    return try self.allocator.dupe(u8, line[index..]);
+            const items = self.commentBuffer.items;
+            if (std.mem.indexOf(u8, items, "//")) |commentStart| {
+                if (std.mem.indexOf(u8, items[commentStart..], "\n")) |linebreakOffset| {
+                    const linebreakIndex = linebreakOffset + commentStart;
+                    const line = try self.allocator.dupe(u8, items[commentStart..linebreakIndex]);
+                    const remaining = try self.allocator.dupe(u8, items[linebreakIndex + 1 ..]);
+                    self.commentBuffer.clearRetainingCapacity();
+                    try self.commentBuffer.appendSlice(remaining);
+                    return line;
+                } else {
+                    const amt = try self.reader.readAll(&buffer);
+                    if (amt == 0) break;
+                    // TODO: Maybe join both and return here instead
+                    try self.commentBuffer.appendSlice(&buffer);
+                    continue;
                 }
+            } else {
+                self.commentBuffer.clearRetainingCapacity();
+                const amt = try self.reader.readAll(&buffer);
+                if (amt == 0) break;
+                try self.commentBuffer.appendSlice(&buffer);
             }
         }
+
+        self.commentBuffer.clearAndFree();
+
         return null;
     }
 
     fn readTODOComments(self: *TodoIterator) !?[]u8 {
-        while (try self.readComments()) |comment| {
+        while (try self.readCommentsDirect()) |comment| {
             for (variants) |prefix| {
                 if (std.mem.indexOf(u8, comment, prefix)) |index| {
                     return try self.allocator.dupe(u8, comment[index..]);
@@ -80,6 +57,7 @@ fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, file: std.fs.
     var iterator = TodoIterator{
         .reader = file.reader(),
         .allocator = allocator,
+        .commentBuffer = std.ArrayList(u8).init(allocator),
     };
     const stdout = std.io.getStdOut();
 
