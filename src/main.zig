@@ -1,35 +1,42 @@
 const std = @import("std");
 const walker = @import("walker.zig");
 
+// TODO: Make it configurable
 const variants = [_][]const u8{ "TODO", "HACK", "NOTE", "PERF", "FIX", "FIXME" };
+
+// TODO: Make it configurable
+const extensions = [_][]const u8{
+    ".zig",
+    ".md",
+    ".kt",
+    ".java",
+    ".go",
+};
 
 const TodoIterator = struct {
     reader: std.fs.File.Reader,
     allocator: std.mem.Allocator,
     commentBuffer: std.ArrayList(u8),
+    start: usize = 0,
 
     fn readCommentsDirect(self: *TodoIterator) !?[]u8 {
-        var buffer: [256]u8 = undefined;
+        var buffer: [4 * 1024]u8 = undefined;
 
         while (true) {
             const items = self.commentBuffer.items;
-            if (std.mem.indexOf(u8, items, "//")) |commentStart| {
-                if (std.mem.indexOf(u8, items[commentStart..], "\n")) |linebreakOffset| {
-                    const linebreakIndex = linebreakOffset + commentStart;
-                    const line = try self.allocator.dupe(u8, items[commentStart..linebreakIndex]);
-                    const remaining = try self.allocator.dupe(u8, items[linebreakIndex + 1 ..]);
-                    self.commentBuffer.clearRetainingCapacity();
-                    try self.commentBuffer.appendSlice(remaining);
-                    return line;
+            if (std.mem.indexOfPos(u8, items, self.start, "//")) |commentStart| {
+                if (std.mem.indexOfScalarPos(u8, items, commentStart, '\n')) |linebreakIndex| {
+                    self.start = linebreakIndex + 1;
+                    return items[commentStart..linebreakIndex];
                 } else {
                     const amt = try self.reader.readAll(&buffer);
                     if (amt == 0) break;
-                    // TODO: Maybe join both and return here instead
                     try self.commentBuffer.appendSlice(&buffer);
                     continue;
                 }
             } else {
                 self.commentBuffer.clearRetainingCapacity();
+                self.start = 0;
                 const amt = try self.reader.readAll(&buffer);
                 if (amt == 0) break;
                 try self.commentBuffer.appendSlice(&buffer);
@@ -89,7 +96,8 @@ pub fn main() !void {
 
     var dirWalker = try walker.walk(allocator, cwd);
     defer dirWalker.deinit();
-    while (try dirWalker.next()) |entry| {
+    while (try dirWalker.next()) |entry| next: {
+        // TODO: Ignore .gitignore files
         // NOTE: Revisit blocking all the hidden files
         if (entry.kind == .directory and std.mem.startsWith(u8, entry.basename, ".")) {
             dirWalker.skip();
@@ -97,6 +105,17 @@ pub fn main() !void {
         }
 
         if (entry.kind == .file) {
+            const extension = std.fs.path.extension(entry.basename);
+
+            check: {
+                for (extensions) |ext| {
+                    if (std.mem.eql(u8, ext, extension)) {
+                        break :check;
+                    }
+                }
+                break :next;
+            }
+
             defer _ = arena.reset(.retain_capacity);
             const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
             defer file.close();
