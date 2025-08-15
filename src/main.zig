@@ -91,7 +91,7 @@ fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, fpath: []cons
         if (!hasPrint) {
             _ = try stdout.write("\n → ");
             _ = try stdout.write(identifier);
-            _ = try stdout.write("\n\n");
+            _ = try stdout.write("\n");
             hasPrint = true;
         }
         _ = try stdout.write(line);
