@@ -1,0 +1,15 @@
+---
+version: "3"
+tasks:
+  build:
+    sources:
+      - src/**.zig
+    generates:
+      - ./zig-out/bin/todo_zen
+    cmds:
+      - zig build --release=fast install
+  install:
+    deps:
+      - build
+    cmds:
+      - cp ./zig-out/bin/todo_zen ~/.local/bin/todo-zen

@@ -1,0 +1,3 @@
+.task/
+.zig-cache/
+zig-out/
