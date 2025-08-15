@@ -76,9 +76,7 @@ const TodoIterator = struct {
     }
 };
 
-fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, fpath: []const u8) !void {
-    const file = try std.fs.openFileAbsolute(fpath, .{ .mode = .read_only });
-    defer file.close();
+fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, file: std.fs.File) !void {
     var iterator = TodoIterator{
         .reader = file.reader(),
         .allocator = allocator,
@@ -108,9 +106,7 @@ pub fn main() !void {
     const arenaAllocator = arena.allocator();
     defer arena.deinit();
 
-    const path = try std.fs.cwd().realpathAlloc(allocator, ".");
-    defer allocator.free(path);
-    var cwd = try std.fs.openDirAbsolute(path, .{ .iterate = true });
+    var cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
     defer cwd.close();
 
     var dirWalker = try walker.walk(allocator, cwd);
@@ -123,10 +119,10 @@ pub fn main() !void {
         }
 
         if (entry.kind == .file) {
-            const fullPath = try cwd.realpathAlloc(arenaAllocator, entry.path);
-            defer _ = arena.reset(.retain_capacity);
+            const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
+            defer file.close();
 
-            try readTodos(arenaAllocator, entry.path, fullPath);
+            try readTodos(arenaAllocator, entry.path, file);
         }
     }
 }
