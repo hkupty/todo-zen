@@ -52,7 +52,7 @@ const TodoIterator = struct {
         while (try self.readCommentsDirect()) |comment| {
             for (variants) |prefix| {
                 if (std.mem.indexOf(u8, comment, prefix)) |index| {
-                    return try self.allocator.dupe(u8, comment[index..]);
+                    return comment[index..];
                 }
             }
         }
