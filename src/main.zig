@@ -119,6 +119,7 @@ pub fn main() !void {
         }
 
         if (entry.kind == .file) {
+            defer _ = arena.reset(.retain_capacity);
             const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
             defer file.close();
 
