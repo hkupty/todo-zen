@@ -7,7 +7,6 @@ const variants = [_][]const u8{ "TODO", "HACK", "NOTE", "PERF", "FIX", "FIXME" }
 // TODO: Make it configurable
 const extensions = [_][]const u8{
     ".zig",
-    ".md",
     ".kt",
     ".java",
     ".go",
