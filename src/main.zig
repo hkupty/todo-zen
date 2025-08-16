@@ -1,10 +1,14 @@
 const std = @import("std");
 const walker = @import("walker.zig");
 
+// TODO: Add clap
+//zig fetch --save git+https://github.com/Hejsil/zig-clap
+
 // TODO: Make it configurable
 const variants = [_][]const u8{ "TODO", "HACK", "FIX", "FIXME" };
 
 // TODO: Make it configurable
+// TODO: Enable different comment prefixes for different file types
 const extensions = [_][]const u8{
     ".zig",
     ".kt",
