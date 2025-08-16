@@ -122,19 +122,17 @@ pub fn main() !void {
     var dirWalker = try walker.walk(allocator, cwd);
     defer dirWalker.deinit();
     while (try dirWalker.next()) |entry| next: {
-        // NOTE: Revisit blocking all the hidden files
         if (entry.kind == .directory and std.mem.startsWith(u8, entry.basename, ".")) {
+            // NOTE: Revisit blocking all the hidden files
+            @branchHint(.unlikely);
             dirWalker.skip();
             continue;
-        }
-
-        // PERF: This check avoids unnecessary traversals on non-code paths in the directory structure
-        if (entry.kind == .directory and dirWalker.depth() > maxDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
+        } else if (entry.kind == .directory and dirWalker.depth() > maxDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
+            // PERF: This check avoids unnecessary traversals on non-code paths in the directory structure
             dirWalker.skip();
             continue;
-        }
-
-        if (entry.kind == .file) {
+        } else if (entry.kind == .file) {
+            @branchHint(.likely);
             const extension = std.fs.path.extension(entry.basename);
 
             // PERF: Avoid checking files that are not actual source files, based on extensions
