@@ -117,19 +117,20 @@ pub fn main() !void {
     var cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
     defer cwd.close();
 
-    // TODO Make it configurable
+    // TODO: Make it configurable
     const maxDepth = 3;
 
+    // TODO: Ignore .gitignore files
     var dirWalker = try walker.walk(allocator, cwd);
     defer dirWalker.deinit();
     while (try dirWalker.next()) |entry| next: {
-        // TODO: Ignore .gitignore files
         // NOTE: Revisit blocking all the hidden files
         if (entry.kind == .directory and std.mem.startsWith(u8, entry.basename, ".")) {
             dirWalker.skip();
             continue;
         }
 
+        // PERF: This check avoids unnecessary traversals on non-code paths in the directory structure
         if (entry.kind == .directory and dirWalker.depth() > maxDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
             dirWalker.skip();
             continue;
@@ -138,6 +139,7 @@ pub fn main() !void {
         if (entry.kind == .file) {
             const extension = std.fs.path.extension(entry.basename);
 
+            // PERF: Avoid checking files that are not actual source files, based on extensions
             check: {
                 for (extensions) |ext| {
                     if (std.mem.eql(u8, ext, extension)) {
