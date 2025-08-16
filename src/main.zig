@@ -52,11 +52,9 @@ const TodoIterator = struct {
                 self.lines = std.mem.count(u8, items, "\n");
                 const amt = try self.reader.readAll(&buffer);
                 if (amt == 0) break;
-                try self.commentBuffer.appendSlice(&buffer);
+                try self.commentBuffer.appendSlice(buffer[0..amt]);
             }
         }
-
-        self.commentBuffer.clearAndFree();
 
         return null;
     }
@@ -150,6 +148,7 @@ pub fn main() !void {
             }
 
             defer _ = arena.reset(.retain_capacity);
+
             const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
             defer file.close();
 
