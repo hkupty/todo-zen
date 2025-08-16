@@ -84,6 +84,10 @@ pub const Walker = struct {
         return null;
     }
 
+    pub fn depth(self: *Walker) usize {
+        return self.stack.items.len;
+    }
+
     pub fn deinit(self: *Walker) void {
         const gpa = self.allocator;
         // Close any remaining directories except the initial one (which is always at index 0)

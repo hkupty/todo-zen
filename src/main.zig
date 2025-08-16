@@ -117,12 +117,20 @@ pub fn main() !void {
     var cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
     defer cwd.close();
 
+    // TODO Make it configurable
+    const maxDepth = 3;
+
     var dirWalker = try walker.walk(allocator, cwd);
     defer dirWalker.deinit();
     while (try dirWalker.next()) |entry| next: {
         // TODO: Ignore .gitignore files
         // NOTE: Revisit blocking all the hidden files
         if (entry.kind == .directory and std.mem.startsWith(u8, entry.basename, ".")) {
+            dirWalker.skip();
+            continue;
+        }
+
+        if (entry.kind == .directory and dirWalker.depth() > maxDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
             dirWalker.skip();
             continue;
         }
