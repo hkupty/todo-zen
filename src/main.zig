@@ -13,21 +13,34 @@ const extensions = [_][]const u8{
     ".go",
 };
 
+const Match = struct {
+    text: []u8,
+    linenumber: usize,
+    column: usize,
+};
+
 const TodoIterator = struct {
     reader: std.fs.File.Reader,
     allocator: std.mem.Allocator,
     commentBuffer: std.ArrayList(u8),
     start: usize = 0,
+    lines: usize = 0,
 
-    fn readCommentsDirect(self: *TodoIterator) !?[]u8 {
+    fn readCommentsDirect(self: *TodoIterator) !?Match {
         var buffer: [4 * 1024]u8 = undefined;
 
         while (true) {
             const items = self.commentBuffer.items;
             if (std.mem.indexOfPos(u8, items, self.start, "//")) |commentStart| {
                 if (std.mem.indexOfScalarPos(u8, items, commentStart, '\n')) |linebreakIndex| {
+                    const columnOffset = std.mem.lastIndexOfScalar(u8, items[0..commentStart], '\n') orelse 0;
+                    const lineOffset = std.mem.count(u8, items[0..commentStart], "\n") + 1;
                     self.start = linebreakIndex + 1;
-                    return items[commentStart..linebreakIndex];
+                    return .{
+                        .text = items[commentStart..linebreakIndex],
+                        .linenumber = self.lines + lineOffset,
+                        .column = commentStart - columnOffset,
+                    };
                 } else {
                     const amt = try self.reader.readAll(&buffer);
                     if (amt == 0) break;
@@ -37,6 +50,7 @@ const TodoIterator = struct {
             } else {
                 self.commentBuffer.clearRetainingCapacity();
                 self.start = 0;
+                self.lines = std.mem.count(u8, items, "\n");
                 const amt = try self.reader.readAll(&buffer);
                 if (amt == 0) break;
                 try self.commentBuffer.appendSlice(&buffer);
@@ -48,11 +62,15 @@ const TodoIterator = struct {
         return null;
     }
 
-    fn readTODOComments(self: *TodoIterator) !?[]u8 {
+    fn readTODOComments(self: *TodoIterator) !?Match {
         while (try self.readCommentsDirect()) |comment| {
             for (variants) |prefix| {
-                if (std.mem.indexOf(u8, comment, prefix)) |index| {
-                    return comment[index..];
+                if (std.mem.indexOf(u8, comment.text, prefix)) |index| {
+                    return .{
+                        .text = comment.text[index..],
+                        .linenumber = comment.linenumber,
+                        .column = comment.column,
+                    };
                 }
             }
         }
@@ -67,18 +85,24 @@ fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, file: std.fs.
         .commentBuffer = std.ArrayList(u8).init(allocator),
     };
     const stdout = std.io.getStdOut();
+    var lineBuilder = try std.ArrayList(u8).initCapacity(allocator, identifier.len + 100);
 
-    var hasPrint = false;
+    lineBuilder.appendSliceAssumeCapacity(identifier);
+    lineBuilder.appendAssumeCapacity(':');
 
     while (try iterator.readTODOComments()) |line| {
-        if (!hasPrint) {
-            _ = try stdout.write("\n → ");
-            _ = try stdout.write(identifier);
-            _ = try stdout.write("\n");
-            hasPrint = true;
-        }
-        _ = try stdout.write(line);
-        _ = try stdout.write("\n");
+        lineBuilder.shrinkRetainingCapacity(identifier.len + 1);
+        const linenumber = try std.fmt.allocPrint(allocator, "{d}", .{line.linenumber});
+        const column = try std.fmt.allocPrint(allocator, "{d}", .{line.column});
+        try lineBuilder.ensureUnusedCapacity(linenumber.len + column.len + line.text.len + 3);
+        lineBuilder.appendSliceAssumeCapacity(linenumber);
+        lineBuilder.appendAssumeCapacity(':');
+        lineBuilder.appendSliceAssumeCapacity(column);
+        lineBuilder.appendAssumeCapacity(':');
+        lineBuilder.appendSliceAssumeCapacity(line.text);
+        lineBuilder.appendAssumeCapacity('\n');
+
+        _ = try stdout.write(lineBuilder.items);
     }
 }
 
