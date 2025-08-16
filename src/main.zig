@@ -2,7 +2,7 @@ const std = @import("std");
 const walker = @import("walker.zig");
 
 // TODO: Make it configurable
-const variants = [_][]const u8{ "TODO", "HACK", "NOTE", "PERF", "FIX", "FIXME" };
+const variants = [_][]const u8{ "TODO", "HACK", "FIX", "FIXME" };
 
 // TODO: Make it configurable
 const extensions = [_][]const u8{
