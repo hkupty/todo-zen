@@ -21,10 +21,11 @@ cp zig-out/bin/todo_zen ~/.local/bin/todo-zen
 ## Usage
 
 ```bash
-todo-zen
-
- → src/main.zig
-NOTE: Revisit blocking all the hidden files
+❯ todo-zen
+src/main.zig:4:1:TODO: Make it configurable
+src/main.zig:7:1:TODO: Make it configurable
+src/main.zig:123:9:TODO: Ignore .gitignore files
+src/main.zig:124:9:NOTE: Revisit blocking all the hidden files
 ```
 
 
@@ -38,27 +39,45 @@ NOTE: Revisit blocking all the hidden files
 rg "//.*(TODO|NOTE|PERF|HACK|FIX|FIXME)"
 
 ## That is because `poop` can't run the rg command directly
+## Result on a small directory (this project)
 ❯ poop 'todo-zen' 'rg-todo'
-Benchmark 1 (1157 runs): todo-zen
+Benchmark 1 (8410 runs): todo-zen
   measurement          mean ± σ            min … max           outliers         delta
-  wall_time          4.25ms ± 2.80ms    2.25ms … 31.1ms         78 ( 7%)        0%
-  peak_rss            778KB ± 8.20KB     623KB …  778KB          7 ( 1%)        0%
-  cpu_cycles         2.29M  ±  683K     2.08M  … 8.54M          91 ( 8%)        0%
-  instructions       5.28M  ±  286      5.28M  … 5.28M           0 ( 0%)        0%
-  cache_references    152K  ± 5.01K      135K  …  174K          17 ( 1%)        0%
-  cache_misses       1.54K  ±  623       696   … 5.47K          21 ( 2%)        0%
-  branch_misses      22.2K  ± 1.02K     19.4K  … 25.2K           1 ( 0%)        0%
-Benchmark 2 (478 runs): rg-todo
+  wall_time           560us ±  468us     261us … 13.7ms        228 ( 3%)        0%
+  peak_rss            772KB ± 16.0KB     508KB …  774KB         98 ( 1%)        0%
+  cpu_cycles          206K  ± 52.6K      194K  … 1.20M         817 (10%)        0%
+  instructions        493K  ± 55.0       493K  …  493K           0 ( 0%)        0%
+  cache_references   6.99K  ±  271      6.28K  … 11.0K         489 ( 6%)        0%
+  cache_misses        368   ± 96.4       151   … 1.36K         458 ( 5%)        0%
+  branch_misses       565   ±  173       396   … 1.78K         754 ( 9%)        0%
+Benchmark 2 (687 runs): rg-todo
   measurement          mean ± σ            min … max           outliers         delta
-  wall_time          10.4ms ± 2.45ms    8.30ms … 35.9ms         45 ( 9%)        💩+145.2% ±  6.8%
-  peak_rss           8.12MB ±  161KB    7.64MB … 8.53MB          1 ( 0%)        💩+943.9% ±  1.2%
-  cpu_cycles         12.9M  ± 2.54M     11.5M  … 41.2M          50 (10%)        💩+461.1% ±  6.9%
-  instructions       23.8M  ±  206K     23.2M  … 24.6M          12 ( 3%)        💩+350.7% ±  0.2%
-  cache_references    806K  ± 23.5K      735K  …  917K          31 ( 6%)        💩+431.7% ±  0.9%
-  cache_misses        146K  ± 7.25K      128K  …  178K          15 ( 3%)        💩+9368.2% ± 27.4%
-  branch_misses       128K  ± 2.78K      121K  …  139K           8 ( 2%)        💩+475.0% ±  0.8%
-❯ rg-todo | wc -l
-26
-❯ todo-zen | wc -l
-58
+  wall_time          7.23ms ± 2.61ms    4.63ms … 27.0ms         53 ( 8%)        💩+1192.0% ± 11.8%
+  peak_rss           7.80MB ±  117KB    7.45MB … 8.15MB          5 ( 1%)        💩+909.3% ±  0.4%
+  cpu_cycles         7.22M  ± 1.54M     6.63M  … 22.4M          59 ( 9%)        💩+3401.7% ± 16.1%
+  instructions       13.7M  ± 8.79K     13.6M  … 13.7M          10 ( 1%)        💩+2669.4% ±  0.0%
+  cache_references    419K  ± 7.85K      390K  …  516K          35 ( 5%)        💩+5898.6% ±  2.4%
+  cache_misses       91.6K  ± 3.74K     82.9K  …  110K          16 ( 2%)        💩+24812.8% ± 21.8%
+  branch_misses      72.7K  ±  758      70.5K  … 75.6K          19 ( 3%)        💩+12771.4% ±  3.7%
+
+## Result on a large monorepo
+Benchmark 1 (52 runs): todo-zen
+  measurement          mean ± σ            min … max           outliers         delta
+  wall_time          97.1ms ± 3.65ms    88.3ms …  109ms          6 (12%)        0%
+  peak_rss            769KB ± 36.6KB     623KB …  778KB          3 ( 6%)        0%
+  cpu_cycles          111M  ± 1.32M      110M  …  117M           5 (10%)        0%
+  instructions        311M  ± 46.9K      311M  …  311M           0 ( 0%)        0%
+  cache_references   3.13M  ±  225K     2.98M  … 4.55M           3 ( 6%)        0%
+  cache_misses       8.01K  ±  770      6.42K  … 10.0K           1 ( 2%)        0%
+  branch_misses       340K  ± 1.78K      336K  …  345K           0 ( 0%)        0%
+Benchmark 2 (55 runs): rg-todo
+  measurement          mean ± σ            min … max           outliers         delta
+  wall_time          91.2ms ± 4.59ms    85.3ms …  108ms          2 ( 4%)        ⚡-  6.1% ±  1.6%
+  peak_rss           10.8MB ±  157KB    10.5MB … 11.1MB          0 ( 0%)        💩+1306.1% ±  5.8%
+  cpu_cycles          259M  ± 16.7M      243M  …  344M           2 ( 4%)        💩+133.4% ±  4.2%
+  instructions        269M  ±  846K      266M  …  271M           2 ( 4%)        ⚡- 13.5% ±  0.1%
+  cache_references   22.1M  ±  271K     21.6M  … 23.0M           2 ( 4%)        💩+605.6% ±  3.1%
+  cache_misses        920K  ± 52.6K      803K  … 1.04M           0 ( 0%)        💩+11390.2% ± 180.8%
+  branch_misses      1.49M  ± 13.9K     1.46M  … 1.51M           0 ( 0%)        💩+337.1% ±  1.1%
+
 ```
