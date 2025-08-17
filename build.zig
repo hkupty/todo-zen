@@ -1,6 +1,25 @@
 const std = @import("std");
+const builtin = @import("builtin");
+
+const min_zig = std.SemanticVersion.parse("0.14.0") catch unreachable;
+const max_zig = std.SemanticVersion.parse("0.14.1") catch unreachable;
 
 pub fn build(b: *std.Build) void {
+    comptime {
+        if (builtin.zig_version.order(min_zig) == .lt) {
+            @compileError(std.fmt.comptimePrint(
+                "Your Zig version v{} does not meet the minimum build requirement of v{}",
+                .{ builtin.zig_version, min_zig },
+            ));
+        }
+        if (builtin.zig_version.order(max_zig) == .gt) {
+            @compileError(std.fmt.comptimePrint(
+                "Your Zig version v{} does not meet the maximum build requirement of v{}",
+                .{ builtin.zig_version, max_zig },
+            ));
+        }
+    }
+
     const target = b.standardTargetOptions(.{});
     const optimize = b.standardOptimizeOption(.{});
 
