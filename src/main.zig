@@ -53,7 +53,7 @@ const TodoIterator = struct {
             } else {
                 self.commentBuffer.clearRetainingCapacity();
                 self.start = 0;
-                self.lines = std.mem.count(u8, items, "\n");
+                self.lines = self.lines + std.mem.count(u8, items, "\n");
                 const amt = try self.reader.readAll(&buffer);
                 if (amt == 0) break;
                 try self.commentBuffer.appendSlice(buffer[0..amt]);
