@@ -1,6 +1,8 @@
 # todo-zen
 
-Simple TODO listing
+Simple TODO listing.
+
+Can be used as a vimgrep-compatible tool or as a CI static check to avoid growing your TODOs out of control.
 
 ## Status
 
@@ -26,10 +28,15 @@ todo-zen [options]
 
 Options:
      -h --help            Shows this help text
-     -d --max-depth       Maximum traversal depth. Set to 0 to disable            [default: 8]
-     -D --max-src-depth   Maximum depth for a `src/` folder. Set to 0 to disable  [default: 3]
+     -d --max-depth       Maximum traversal depth.                                [default: 8]
+                          Set to 0 to disable.
+     -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 3]
+                          Set to 0 to disable.
+     -t --threshold       When set, exit with code 1 if there are more todos      [default: 0]
+                          then the value set in the threshold.
      -m --markers         Comment markers to look for in the comments.            [default: TODO,HACK,FIX,FIXME]
      -x --extensions      File extensions to be considered during search.         [default: zig,java,kt,go]
+
 
 ❯ todo-zen
 src/main.zig:4:1:TODO: Make it configurable
