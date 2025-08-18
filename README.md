@@ -21,27 +21,22 @@ cp zig-out/bin/todo_zen ~/.local/bin/todo-zen
 ## Usage
 
 ```bash
+❯ todo-zen --help
+todo-zen [options]
+
+Options:
+     -h --help            Shows this help text
+     -d --max-depth       Maximum traversal depth. Set to 0 to disable            [default: 8]
+     -D --max-src-depth   Maximum depth for a `src/` folder. Set to 0 to disable  [default: 3]
+     -m --markers         Comment markers to look for in the comments.            [default: TODO,HACK,FIX,FIXME]
+     -x --extensions      File extensions to be considered during search.         [default: zig,java,kt,go]
+
 ❯ todo-zen
 src/main.zig:4:1:TODO: Make it configurable
 src/main.zig:7:1:TODO: Make it configurable
 src/main.zig:123:9:TODO: Ignore .gitignore files
 src/main.zig:124:9:NOTE: Revisit blocking all the hidden files
 ```
-
-## Features
-
-`todo-zen` is quite limited in features yet but it can already:
-- List `TODO`, `HACK`, `FIX` and `FIXME` comments;
-- Skip hidden folders;
-- Return a vimgrep-compatible format;
-- Bail out of too deep directory trees without finding `src/` folder.
-
-Expected features to come are:
-- [ ] flag parsing support;
-    - [ ] `-d` Max depth;
-    - [ ] `-D` Max depth for `src/` directory
-    - [ ] `-m` Markers to look for;
-    - [ ] `-l` languages/extensions to look for;
 
 ## Performance
 `todo-zen` already has a quite decent performance, much thanks to Zig, but there's definitely room for improvement.
