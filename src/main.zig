@@ -98,7 +98,7 @@ fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, file: std.fs.
     return count;
 }
 
-pub fn main() !void {
+pub fn main() !u8 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer std.debug.assert(gpa.deinit() == .ok);
@@ -110,7 +110,12 @@ pub fn main() !void {
     var cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
     defer cwd.close();
 
-    const config = try Config.parseConfigFromArgs(allocator);
+    const config = Config.parseConfigFromArgs(allocator) catch |err| {
+        switch (err) {
+            Config.ConfigError.Help => return 0,
+            else => return err,
+        }
+    };
     defer config.deinit(allocator);
 
     // TODO: Ignore .gitignore files
@@ -163,6 +168,8 @@ pub fn main() !void {
     }
 
     if (config.threshold > 0 and count > config.threshold) {
-        std.process.exit(1);
+        return 1;
     }
+
+    return 0;
 }

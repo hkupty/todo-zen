@@ -21,8 +21,8 @@ const help =
     \\                          Set to 0 to disable.
     \\     -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 3]
     \\                          Set to 0 to disable.
-    \\     -t --threshold       Maximum number of todos. Will exit 1 if exceeds value.  [default: 16]
-    \\                          Set to 0 to disable.
+    \\     -t --threshold       When set, exit with code 1 if there are more todos      [default: 0]
+    \\                          then the value set in the threshold.
     \\     -m --markers         Comment markers to look for in the comments.            [default: TODO,HACK,FIX,FIXME]
     \\     -x --extensions      File extensions to be considered during search.         [default: zig,java,kt,go]
     \\
@@ -47,6 +47,10 @@ pub fn deinit(self: *const Config, allocator: std.mem.Allocator) void {
     allocator.free(self.markers);
     allocator.free(self.fileTypes);
 }
+
+pub const ConfigError = error{
+    Help,
+};
 
 pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
     var args = std.process.args();
@@ -104,7 +108,7 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         } else {
             if (std.mem.eql(u8, "-h", arg) or std.mem.eql(u8, "--help", arg)) {
                 _ = try stdout.writeAll(help);
-                std.process.exit(0);
+                return ConfigError.Help;
             }
 
             cursor = arg;
@@ -130,6 +134,6 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         .fileTypes = filetypes.?,
         .maxDepth = maxDepth orelse 8,
         .maxSrcDepth = maxSrcDepth orelse 3,
-        .threshold = threshold orelse 16,
+        .threshold = threshold orelse 0,
     };
 }
