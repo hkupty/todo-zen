@@ -17,12 +17,12 @@ const TodoIterator = struct {
     start: usize = 0,
     lines: usize = 0,
 
-    fn readCommentsDirect(self: *TodoIterator) !?Match {
+    fn readCommentsDirect(self: *TodoIterator, prefix: []const u8) !?Match {
         var buffer: [4 * 1024]u8 = undefined;
 
         while (true) {
             const items = self.commentBuffer.items;
-            if (std.mem.indexOfPos(u8, items, self.start, "//")) |commentStart| {
+            if (std.mem.indexOfPos(u8, items, self.start, prefix)) |commentStart| {
                 if (std.mem.indexOfScalarPos(u8, items, commentStart, '\n')) |linebreakIndex| {
                     const columnOffset = std.mem.lastIndexOfScalar(u8, items[0..commentStart], '\n') orelse 0;
                     const lineOffset = std.mem.count(u8, items[0..commentStart], "\n") + 1;
@@ -52,7 +52,7 @@ const TodoIterator = struct {
     }
 
     fn readTODOComments(self: *TodoIterator, config: Config) !?Match {
-        while (try self.readCommentsDirect()) |comment| {
+        while (try self.readCommentsDirect(config.prefix)) |comment| {
             for (config.markers) |prefix| {
                 if (std.mem.indexOf(u8, comment.text, prefix)) |index| {
                     return .{

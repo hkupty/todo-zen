@@ -4,7 +4,6 @@ const stdout = std.io.getStdOut();
 
 const variants = [_][]const u8{ "TODO", "HACK", "FIX", "FIXME" };
 
-// TODO: Enable different comment prefixes for different file types
 const extensions = [_][]const u8{
     "zig",
     "kt",
@@ -17,6 +16,7 @@ const help =
     \\
     \\Options:
     \\     -h --help            Shows this help text
+    \\     -c --comment-prefix  Sets the prefix for comments to be the specified value  [default: //]
     \\     -d --max-depth       Maximum traversal depth.                                [default: 8]
     \\                          Set to 0 to disable.
     \\     -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 3]
@@ -28,6 +28,7 @@ const help =
     \\
 ;
 
+prefix: []const u8,
 markers: [][]const u8,
 maxDepth: usize,
 maxSrcDepth: usize,
@@ -46,12 +47,14 @@ pub fn deinit(self: *const Config, allocator: std.mem.Allocator) void {
     }
     allocator.free(self.markers);
     allocator.free(self.fileTypes);
+    allocator.free(self.prefix);
 }
 
 pub const ConfigError = error{
     Help,
 };
 
+// TODO: Parse help in comptime
 pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
     var args = std.process.args();
     defer args.deinit();
@@ -63,6 +66,7 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
     var maxDepth: ?usize = null;
     var maxSrcDepth: ?usize = null;
     var threshold: ?usize = null;
+    var prefix: ?[]u8 = null;
     while (args.next()) |arg| {
         if (cursor) |flag| {
             if (std.mem.eql(u8, "-m", flag) or std.mem.eql(u8, "--markers", flag)) {
@@ -97,6 +101,8 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
                     };
                     filetypes.?[ix] = ft;
                 }
+            } else if (std.mem.eql(u8, "-c", flag) or std.mem.eql(u8, "--comment", flag)) {
+                prefix = try allocator.dupe(u8, arg);
             } else if (std.mem.eql(u8, "-d", flag) or std.mem.eql(u8, "--max-depth", flag)) {
                 maxDepth = try std.fmt.parseInt(usize, arg, 10);
             } else if (std.mem.eql(u8, "-D", flag) or std.mem.eql(u8, "--max-src-depth", flag)) {
@@ -129,9 +135,14 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         }
     }
 
+    if (prefix == null) {
+        prefix = try allocator.dupe(u8, "//");
+    }
+
     return .{
         .markers = markers.?,
         .fileTypes = filetypes.?,
+        .prefix = prefix.?,
         .maxDepth = maxDepth orelse 8,
         .maxSrcDepth = maxSrcDepth orelse 3,
         .threshold = threshold orelse 0,
