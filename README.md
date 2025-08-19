@@ -28,6 +28,7 @@ todo-zen [options]
 
 Options:
      -h --help            Shows this help text
+     -c --comment-prefix  Sets the prefix for comments to be the specified value  [default: //]
      -d --max-depth       Maximum traversal depth.                                [default: 8]
                           Set to 0 to disable.
      -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 3]
@@ -36,7 +37,6 @@ Options:
                           then the value set in the threshold.
      -m --markers         Comment markers to look for in the comments.            [default: TODO,HACK,FIX,FIXME]
      -x --extensions      File extensions to be considered during search.         [default: zig,java,kt,go]
-
 
 ❯ todo-zen
 src/main.zig:4:1:TODO: Make it configurable
@@ -116,3 +116,8 @@ Benchmark 3 (10 runs): todo-gg
   cache_misses        827K  ± 30.3K      793K  …  895K           0 ( 0%)        💩+22463.2% ± 133.5%
   branch_misses      2.06M  ± 9.34K     2.05M  … 2.08M           0 ( 0%)        💩+1375.4% ±  1.2%
 ```
+
+## Why?
+
+I really wanted to learn zig in a practical problem space and, while I was developing another zig project, I noticed I was using several TODOs in my code so this felt
+like a natural continuation - keep learning zig while developing something practical/useful.
