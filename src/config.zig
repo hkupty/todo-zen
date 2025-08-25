@@ -1,6 +1,8 @@
 const std = @import("std");
 
-const stdout = std.io.getStdOut();
+var stdout_buffer: [help.len]u8 = undefined;
+var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+const stdout = &stdout_writer.interface;
 
 const variants = [_][]const u8{ "TODO", "HACK", "FIX", "FIXME" };
 
@@ -114,6 +116,7 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         } else {
             if (std.mem.eql(u8, "-h", arg) or std.mem.eql(u8, "--help", arg)) {
                 _ = try stdout.writeAll(help);
+                try stdout.flush();
                 return ConfigError.Help;
             }
 

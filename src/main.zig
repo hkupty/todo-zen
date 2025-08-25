@@ -2,98 +2,50 @@ const std = @import("std");
 const walker = @import("walker.zig");
 const Config = @import("config.zig");
 
-const stdout = std.io.getStdOut();
+const stdout_buffer_size: usize = 2 * 1024;
+const file_buffer_size: usize = 4 * 1024;
+const content_buffer_size: usize = 6 * 1024;
 
-const Match = struct {
-    text: []u8,
-    linenumber: usize,
-    column: usize,
-};
+var stdout_buffer: [stdout_buffer_size]u8 = undefined;
+var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
+const stdout = &stdout_writer.interface;
 
-const TodoIterator = struct {
-    reader: std.fs.File.Reader,
-    allocator: std.mem.Allocator,
-    commentBuffer: std.ArrayList(u8),
-    start: usize = 0,
-    lines: usize = 0,
-
-    fn readCommentsDirect(self: *TodoIterator, prefix: []const u8) !?Match {
-        var buffer: [4 * 1024]u8 = undefined;
-
-        while (true) {
-            const items = self.commentBuffer.items;
-            if (std.mem.indexOfPos(u8, items, self.start, prefix)) |commentStart| {
-                if (std.mem.indexOfScalarPos(u8, items, commentStart, '\n')) |linebreakIndex| {
-                    const columnOffset = std.mem.lastIndexOfScalar(u8, items[0..commentStart], '\n') orelse 0;
-                    const lineOffset = std.mem.count(u8, items[0..commentStart], "\n") + 1;
-                    self.start = linebreakIndex + 1;
-                    return .{
-                        .text = items[commentStart..linebreakIndex],
-                        .linenumber = self.lines + lineOffset,
-                        .column = commentStart - columnOffset,
-                    };
-                } else {
-                    const amt = try self.reader.readAll(&buffer);
-                    if (amt == 0) break;
-                    try self.commentBuffer.appendSlice(&buffer);
-                    continue;
-                }
-            } else {
-                self.commentBuffer.clearRetainingCapacity();
-                self.start = 0;
-                self.lines = self.lines + std.mem.count(u8, items, "\n");
-                const amt = try self.reader.readAll(&buffer);
-                if (amt == 0) break;
-                try self.commentBuffer.appendSlice(buffer[0..amt]);
-            }
-        }
-
-        return null;
-    }
-
-    fn readTODOComments(self: *TodoIterator, config: Config) !?Match {
-        while (try self.readCommentsDirect(config.prefix)) |comment| {
-            for (config.markers) |prefix| {
-                if (std.mem.indexOf(u8, comment.text, prefix)) |index| {
-                    return .{
-                        .text = comment.text[index..],
-                        .linenumber = comment.linenumber,
-                        .column = comment.column,
-                    };
-                }
-            }
-        }
-        return null;
-    }
-};
-
-fn readTodos(allocator: std.mem.Allocator, identifier: []const u8, file: std.fs.File, config: Config) !usize {
-    var iterator = TodoIterator{
-        .reader = file.reader(),
-        .allocator = allocator,
-        .commentBuffer = std.ArrayList(u8).init(allocator),
-    };
-
-    var lineBuilder = try std.ArrayList(u8).initCapacity(allocator, identifier.len + 100);
-
-    lineBuilder.appendSliceAssumeCapacity(identifier);
-    lineBuilder.appendAssumeCapacity(':');
+fn readTodos(identifier: []const u8, file: std.fs.File, config: Config) !usize {
+    var reader_buffer: [file_buffer_size]u8 = undefined;
+    var file_reader = file.reader(&reader_buffer);
+    var reader = &file_reader.interface;
     var count: usize = 0;
+    var lineno: usize = 1;
 
-    while (try iterator.readTODOComments(config)) |line| : (count += 1) {
-        lineBuilder.shrinkRetainingCapacity(identifier.len + 1);
-        const linenumber = try std.fmt.allocPrint(allocator, "{d}", .{line.linenumber});
-        const column = try std.fmt.allocPrint(allocator, "{d}", .{line.column});
-        try lineBuilder.ensureUnusedCapacity(linenumber.len + column.len + line.text.len + 3);
-        lineBuilder.appendSliceAssumeCapacity(linenumber);
-        lineBuilder.appendAssumeCapacity(':');
-        lineBuilder.appendSliceAssumeCapacity(column);
-        lineBuilder.appendAssumeCapacity(':');
-        lineBuilder.appendSliceAssumeCapacity(line.text);
-        lineBuilder.appendAssumeCapacity('\n');
+    lines: while (!file_reader.atEnd()) : (lineno += 1) {
+        const line = reader.peekDelimiterExclusive('\n') catch |err| {
+            if (err == error.EndOfStream) break;
+            return err;
+        };
 
-        _ = try stdout.write(lineBuilder.items);
+        if (std.mem.indexOf(u8, line, config.prefix)) |prefix| {
+            for (config.markers) |marker| {
+                if (std.mem.indexOfPos(u8, line, prefix, marker)) |mpos| {
+                    count += 1;
+                    _ = try stdout.write(identifier);
+                    try stdout.print(":{d}:{d}:", .{ lineno, mpos });
+                    reader.toss(mpos);
+                    _ = try reader.streamDelimiter(stdout, '\n');
+                    try stdout.writeByte('\n');
+                    reader.toss(1);
+                    continue :lines;
+                }
+            }
+        }
+        reader.toss(line.len);
+        _ = reader.peekByte() catch |err| {
+            if (err == error.EndOfStream) break;
+            return err;
+        };
+        reader.toss(1);
     }
+
+    try stdout.flush();
 
     return count;
 }
@@ -102,10 +54,6 @@ pub fn main() !u8 {
     var gpa = std.heap.GeneralPurposeAllocator(.{}){};
     const allocator = gpa.allocator();
     defer std.debug.assert(gpa.deinit() == .ok);
-
-    var arena = std.heap.ArenaAllocator.init(allocator);
-    const arenaAllocator = arena.allocator();
-    defer arena.deinit();
 
     var cwd = try std.fs.cwd().openDir(".", .{ .iterate = true });
     defer cwd.close();
@@ -156,12 +104,10 @@ pub fn main() !u8 {
                     break :next;
                 }
 
-                defer _ = arena.reset(.retain_capacity);
-
                 const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
                 defer file.close();
 
-                count += try readTodos(arenaAllocator, entry.path, file, config);
+                count += try readTodos(entry.path, file, config);
             },
             else => {},
         }
