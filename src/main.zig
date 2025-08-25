@@ -2,9 +2,8 @@ const std = @import("std");
 const walker = @import("walker.zig");
 const Config = @import("config.zig");
 
-const stdout_buffer_size: usize = 2 * 1024;
+const stdout_buffer_size: usize = 4 * 1024;
 const file_buffer_size: usize = 4 * 1024;
-const content_buffer_size: usize = 6 * 1024;
 
 var stdout_buffer: [stdout_buffer_size]u8 = undefined;
 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
@@ -28,7 +27,11 @@ fn readTodos(identifier: []const u8, file: std.fs.File, config: Config) !usize {
                 if (std.mem.indexOfPos(u8, line, prefix, marker)) |mpos| {
                     count += 1;
                     _ = try stdout.write(identifier);
-                    try stdout.print(":{d}:{d}:", .{ lineno, mpos });
+                    _ = try stdout.writeByte(':');
+                    _ = try stdout.printInt(lineno, 10, .lower, .{});
+                    _ = try stdout.writeByte(':');
+                    _ = try stdout.printInt(mpos, 10, .lower, .{});
+
                     reader.toss(mpos);
                     _ = try reader.streamDelimiter(stdout, '\n');
                     try stdout.writeByte('\n');
@@ -37,12 +40,7 @@ fn readTodos(identifier: []const u8, file: std.fs.File, config: Config) !usize {
                 }
             }
         }
-        reader.toss(line.len);
-        _ = reader.peekByte() catch |err| {
-            if (err == error.EndOfStream) break;
-            return err;
-        };
-        reader.toss(1);
+        reader.toss(line.len + 1);
     }
 
     try stdout.flush();
