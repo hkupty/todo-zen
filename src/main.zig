@@ -1,6 +1,6 @@
 const std = @import("std");
-const walker = @import("walker.zig");
 const Config = @import("config.zig");
+const Walker = std.fs.Dir.Walker;
 
 const stdout_buffer_size: usize = 4 * 1024;
 const file_buffer_size: usize = 4 * 1024;
@@ -65,24 +65,25 @@ pub fn main() !u8 {
     defer config.deinit(allocator);
 
     // TODO: Ignore .gitignore files
-    var dirWalker = try walker.walk(allocator, cwd);
+    var dirWalker = try cwd.walk(allocator);
     defer dirWalker.deinit();
     var count: usize = 0;
     while (try dirWalker.next()) |entry| next: {
         switch (entry.kind) {
             .directory => {
+                @branchHint(.unlikely);
                 if (std.mem.startsWith(u8, entry.basename, ".")) {
                     // NOTE: Revisit blocking all the hidden files
-                    @branchHint(.unlikely);
-                    dirWalker.skip();
+                    @branchHint(.cold);
+                    skip(&dirWalker);
                     continue;
-                } else if (config.maxSrcDepth > 0 and dirWalker.depth() > config.maxSrcDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
+                } else if (config.maxSrcDepth > 0 and depth(&dirWalker) > config.maxSrcDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
                     // PERF: This check avoids unnecessary traversals on non-code paths in the directory structure
-                    dirWalker.skip();
+                    skip(&dirWalker);
                     continue;
-                } else if (config.maxDepth > 0 and dirWalker.depth() > config.maxDepth) {
+                } else if (config.maxDepth > 0 and depth(&dirWalker) > config.maxDepth) {
                     // PERF: This check avoids unnecessary traversals on too nested paths in the directory structure
-                    dirWalker.skip();
+                    skip(&dirWalker);
                     continue;
                 }
             },
@@ -116,4 +117,16 @@ pub fn main() !u8 {
     }
 
     return 0;
+}
+
+pub fn depth(self: *Walker) usize {
+    return self.stack.items.len;
+}
+
+/// Skips processing the remainder of the files in the current directory
+pub fn skip(self: *Walker) void {
+    var item = self.stack.pop().?;
+    if (self.stack.items.len != 0) {
+        item.iter.dir.close();
+    }
 }
