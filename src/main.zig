@@ -6,17 +6,15 @@ const stdout_buffer_size: usize = 4 * 1024;
 const file_buffer_size: usize = 4 * 1024;
 
 var stdout_buffer: [stdout_buffer_size]u8 = undefined;
+var reader_buffer: [file_buffer_size]u8 = undefined;
 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
 const stdout = &stdout_writer.interface;
 
-fn readTodos(identifier: []const u8, file: std.fs.File, config: Config) !usize {
-    var reader_buffer: [file_buffer_size]u8 = undefined;
-    var file_reader = file.reader(&reader_buffer);
-    var reader = &file_reader.interface;
+fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !usize {
     var count: usize = 0;
     var lineno: usize = 1;
 
-    lines: while (!file_reader.atEnd()) : (lineno += 1) {
+    lines: while (true) : (lineno += 1) {
         const line = reader.peekDelimiterExclusive('\n') catch |err| {
             if (err == error.EndOfStream) break;
             return err;
@@ -105,8 +103,9 @@ pub fn main() !u8 {
 
                 const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
                 defer file.close();
+                var file_reader = file.reader(&reader_buffer);
 
-                count += try readTodos(entry.path, file, config);
+                count += try readTodos(entry.path, &file_reader.interface, config);
             },
             else => {},
         }
