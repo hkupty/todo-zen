@@ -29,6 +29,7 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
                     _ = try stdout.printInt(lineno, 10, .lower, .{});
                     _ = try stdout.writeByte(':');
                     _ = try stdout.printInt(mpos, 10, .lower, .{});
+                    _ = try stdout.writeByte(':');
 
                     reader.toss(mpos);
                     _ = try reader.streamDelimiter(stdout, '\n');
