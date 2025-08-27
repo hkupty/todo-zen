@@ -2,7 +2,7 @@ const std = @import("std");
 const Config = @import("config.zig");
 const Walker = std.fs.Dir.Walker;
 
-const stdout_buffer_size: usize = 4 * 1024;
+const stdout_buffer_size: usize = 64 * 1024;
 const file_buffer_size: usize = 4 * 1024;
 
 var stdout_buffer: [stdout_buffer_size]u8 = undefined;
