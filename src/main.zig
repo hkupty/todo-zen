@@ -42,8 +42,6 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
         reader.toss(line.len + 1);
     }
 
-    try stdout.flush();
-
     return count;
 }
 
@@ -111,6 +109,8 @@ pub fn main() !u8 {
             else => {},
         }
     }
+
+    try stdout.flush();
 
     if (config.threshold > 0 and count > config.threshold) {
         return 1;
