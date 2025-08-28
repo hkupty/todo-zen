@@ -15,7 +15,7 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
     var lineno: usize = 1;
 
     lines: while (true) : (lineno += 1) {
-        const line = reader.peekDelimiterExclusive('\n') catch |err| {
+        const line = reader.peekDelimiterInclusive('\n') catch |err| {
             if (err == error.EndOfStream) break;
             return err;
         };
@@ -34,12 +34,11 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
                     reader.toss(mpos);
                     _ = try reader.streamDelimiter(stdout, '\n');
                     try stdout.writeByte('\n');
-                    reader.toss(1);
                     continue :lines;
                 }
             }
         }
-        reader.toss(line.len + 1);
+        reader.toss(line.len);
     }
 
     return count;
@@ -59,6 +58,7 @@ pub fn main() !u8 {
             else => return err,
         }
     };
+
     defer config.deinit(allocator);
 
     // TODO: Ignore .gitignore files
