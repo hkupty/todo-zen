@@ -2,6 +2,9 @@ const std = @import("std");
 const Config = @import("config.zig");
 const Walker = std.fs.Dir.Walker;
 
+// TODO: Allow multi-threaded
+// TODO: trie-based file blocking (to enable .gitignore)
+
 const stdout_buffer_size: usize = 64 * 1024;
 const file_buffer_size: usize = 4 * 1024;
 
