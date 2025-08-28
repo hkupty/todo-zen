@@ -20,7 +20,7 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
             return err;
         };
 
-        if (std.mem.indexOf(u8, line, config.prefix)) |prefix| {
+        if (config.searchFn(line, config.prefix)) |prefix| {
             for (config.markers) |marker| {
                 if (std.mem.indexOfPos(u8, line, prefix, marker)) |mpos| {
                     count += 1;
