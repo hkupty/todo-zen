@@ -22,19 +22,22 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
 
         if (config.searchFn(line, config.prefix)) |prefix| {
             for (config.markers) |marker| {
-                if (std.mem.indexOfPos(u8, line, prefix, marker)) |mpos| {
-                    count += 1;
-                    _ = try stdout.write(identifier);
-                    _ = try stdout.writeByte(':');
-                    _ = try stdout.printInt(lineno, 10, .lower, .{});
-                    _ = try stdout.writeByte(':');
-                    _ = try stdout.printInt(mpos, 10, .lower, .{});
-                    _ = try stdout.writeByte(':');
+                if (std.mem.indexOfScalarPos(u8, line, prefix, marker[0])) |mpos| {
+                    const match = line[mpos..];
+                    if (match.len >= marker.len and std.mem.eql(u8, match[0..marker.len], marker)) {
+                        count += 1;
+                        _ = try stdout.write(identifier);
+                        _ = try stdout.writeByte(':');
+                        _ = try stdout.printInt(lineno, 10, .lower, .{});
+                        _ = try stdout.writeByte(':');
+                        _ = try stdout.printInt(mpos, 10, .lower, .{});
+                        _ = try stdout.writeByte(':');
 
-                    reader.toss(mpos);
-                    _ = try reader.streamDelimiter(stdout, '\n');
-                    try stdout.writeByte('\n');
-                    continue :lines;
+                        reader.toss(mpos);
+                        _ = try reader.streamDelimiter(stdout, '\n');
+                        try stdout.writeByte('\n');
+                        continue :lines;
+                    }
                 }
             }
         }
