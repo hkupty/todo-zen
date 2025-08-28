@@ -82,7 +82,6 @@ pub fn main() !u8 {
     };
     defer config.deinit(allocator);
 
-    // TODO: Ignore .gitignore files
     var dirWalker = try walker.DirWalker.init(allocator, cwd);
     defer dirWalker.deinit(allocator);
     var count: usize = 0;
@@ -90,13 +89,15 @@ pub fn main() !u8 {
         switch (entry.kind) {
             .directory => {
                 @branchHint(.unlikely);
+                // Ignore hidden folders
+                if (entry.basename[0] == '.') break :next;
                 const cur_depth = dirWalker.depth() + 1;
-                const hitMaxSrcDepth = config.maxSrcDepth > 0 and cur_depth > config.maxSrcDepth and std.mem.indexOf(u8, entry.path, "src") == null;
-                const hitMaxDepth = config.maxDepth > 0 and cur_depth > config.maxDepth;
 
-                if (entry.basename[0] == '.' or hitMaxSrcDepth or hitMaxDepth) {
-                    break :next;
-                }
+                // Ignore deep paths without src
+                if (config.maxSrcDepth > 0 and cur_depth > config.maxSrcDepth and std.mem.indexOf(u8, entry.path, "src") == null) break :next;
+                // Ignore too deep paths
+                if (config.maxDepth > 0 and cur_depth > config.maxDepth) break :next;
+
                 try dirWalker.accept(allocator, entry);
             },
             .file => {
