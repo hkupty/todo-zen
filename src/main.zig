@@ -23,11 +23,27 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
             return err;
         };
 
-        if (config.searchFn(line, config.prefix)) |prefix| {
+        const prefixIndex: ?usize = sz: switch (config.prefix.len) {
+            1 => break :sz std.mem.indexOfScalar(u8, line, config.prefix[0]),
+            2 => {
+                @branchHint(.likely);
+                if (std.mem.indexOfScalar(u8, line, config.prefix[0])) |index| {
+                    break :sz if (line[index + 1] == config.prefix[1]) index else null;
+                } else {
+                    break :sz null;
+                }
+            },
+
+            else => break :sz std.mem.indexOf(u8, line, config.prefix),
+        };
+
+        if (prefixIndex) |prefix| {
+            @branchHint(.unlikely);
             for (config.markers) |marker| {
                 if (std.mem.indexOfScalarPos(u8, line, prefix, marker[0])) |mpos| {
                     const match = line[mpos..];
                     if (match.len >= marker.len and std.mem.eql(u8, match[0..marker.len], marker)) {
+                        @branchHint(.unlikely);
                         count += 1;
                         _ = try stdout.write(identifier);
                         _ = try stdout.writeByte(':');

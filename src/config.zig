@@ -1,7 +1,5 @@
 const std = @import("std");
 
-const SearchFn = *const fn ([]const u8, []const u8) ?usize;
-
 var stdout_buffer: [help.len]u8 = undefined;
 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
 const stdout = &stdout_writer.interface;
@@ -38,22 +36,6 @@ maxDepth: usize,
 maxSrcDepth: usize,
 threshold: usize,
 fileTypes: [][]const u8,
-searchFn: SearchFn,
-
-fn scalarIndexOfSz2(haystack: []const u8, prefix: []const u8) ?usize {
-    std.debug.assert(prefix.len == 2);
-    if (std.mem.indexOfScalar(u8, haystack, prefix[0])) |index| {
-        if (haystack[index + 1] == prefix[1]) {
-            return index;
-        }
-    }
-    return null;
-}
-
-fn scalarIndexOfSz1(haystack: []const u8, prefix: []const u8) ?usize {
-    std.debug.assert(prefix.len == 1);
-    return std.mem.indexOfScalar(u8, haystack, prefix[0]);
-}
 
 const Config = @This();
 
@@ -160,7 +142,6 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         prefix = try allocator.dupe(u8, "//");
     }
 
-    const serchFn: SearchFn = if (prefix.?.len > 1) scalarIndexOfSz2 else scalarIndexOfSz1;
     return .{
         .markers = markers.?,
         .fileTypes = filetypes.?,
@@ -168,6 +149,5 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         .maxDepth = maxDepth orelse 8,
         .maxSrcDepth = maxSrcDepth orelse 3,
         .threshold = threshold orelse 0,
-        .searchFn = serchFn,
     };
 }
