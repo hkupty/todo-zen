@@ -21,7 +21,7 @@ const help =
     \\     -c --comment-prefix  Sets the prefix for comments to be the specified value  [default: //]
     \\     -d --max-depth       Maximum traversal depth.                                [default: 8]
     \\                          Set to 0 to disable.
-    \\     -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 3]
+    \\     -D --max-src-depth   Maximum depth for a `src/` folder.                      [default: 4]
     \\                          Set to 0 to disable.
     \\     -t --threshold       When set, exit with code 1 if there are more todos      [default: 0]
     \\                          then the value set in the threshold.
@@ -147,7 +147,7 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         .fileTypes = filetypes.?,
         .prefix = prefix.?,
         .maxDepth = maxDepth orelse 8,
-        .maxSrcDepth = maxSrcDepth orelse 3,
+        .maxSrcDepth = maxSrcDepth orelse 4,
         .threshold = threshold orelse 0,
     };
 }
