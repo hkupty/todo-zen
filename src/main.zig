@@ -53,8 +53,7 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
                         _ = try stdout.writeByte(':');
 
                         reader.toss(mpos);
-                        _ = try reader.streamDelimiter(stdout, '\n');
-                        try stdout.writeByte('\n');
+                        _ = try reader.streamExact(stdout, line.len - mpos);
                         continue :lines;
                     }
                 }
