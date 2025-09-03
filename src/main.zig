@@ -20,8 +20,8 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, writer: *std.Io.Wri
         const line = reader.peekDelimiterInclusive('\n') catch |err| x: {
             if (err == error.EndOfStream) {
                 const line = reader.buffer[reader.seek..reader.end];
-                if (line.len > 0) break :x line;
-                break;
+                if (line.len == 0) break;
+                break :x line;
             } else {
                 return err;
             }
@@ -44,6 +44,7 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, writer: *std.Io.Wri
         if (prefixIndex) |prefix| {
             @branchHint(.unlikely);
             for (config.markers) |marker| {
+                // We're abusing the fact that a TODO is likely the immediate next word after a comment, with some optional non-alphanumeric prefix
                 if (std.mem.indexOfScalarPos(u8, line, prefix, marker[0])) |mpos| {
                     const match = line[mpos..];
                     if (match.len >= marker.len and std.mem.eql(u8, match[0..marker.len], marker)) {
