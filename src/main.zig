@@ -181,8 +181,9 @@ test "hardcoded" {
     var fts = [_][]const u8{};
 
     var writer: std.Io.Writer = .fixed(&buffer);
+    const id = "testing";
 
-    const count = try readTodos("", &content, &writer, .{
+    const count = try readTodos(id, &content, &writer, .{
         .prefix = "//",
         .markers = &prefixes,
         .maxDepth = 0,
@@ -203,7 +204,8 @@ test "hardcoded" {
     while (iter.next()) |position| : (ix += 1) {
         const testData = mapping[ix];
         var spl = std.mem.splitScalar(u8, position, ':');
-        _ = spl.next().?;
+        const filename = spl.next().?;
+        try std.testing.expectEqualStrings(id, filename);
 
         const lineStr = spl.next().?;
         const line = std.fmt.parseInt(usize, lineStr, 10) catch |err| {
