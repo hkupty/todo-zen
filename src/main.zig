@@ -11,9 +11,8 @@ const file_buffer_size: usize = 4 * 1024;
 var stdout_buffer: [stdout_buffer_size]u8 = undefined;
 var reader_buffer: [file_buffer_size]u8 = undefined;
 var stdout_writer = std.fs.File.stdout().writer(&stdout_buffer);
-const stdout = &stdout_writer.interface;
 
-fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !usize {
+fn readTodos(identifier: []const u8, reader: *std.Io.Reader, writer: *std.Io.Writer, config: Config) !usize {
     var count: usize = 0;
     var lineno: usize = 1;
 
@@ -45,15 +44,15 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, config: Config) !us
                     if (match.len >= marker.len and std.mem.eql(u8, match[0..marker.len], marker)) {
                         @branchHint(.unlikely);
                         count += 1;
-                        _ = try stdout.write(identifier);
-                        _ = try stdout.writeByte(':');
-                        _ = try stdout.printInt(lineno, 10, .lower, .{});
-                        _ = try stdout.writeByte(':');
-                        _ = try stdout.printInt(mpos, 10, .lower, .{});
-                        _ = try stdout.writeByte(':');
+                        _ = try writer.write(identifier);
+                        _ = try writer.writeByte(':');
+                        _ = try writer.printInt(lineno, 10, .lower, .{});
+                        _ = try writer.writeByte(':');
+                        _ = try writer.printInt(mpos, 10, .lower, .{});
+                        _ = try writer.writeByte(':');
 
                         reader.toss(mpos);
-                        _ = try reader.streamExact(stdout, line.len - mpos);
+                        _ = try reader.streamExact(writer, line.len - mpos);
                         continue :lines;
                     }
                 }
@@ -80,6 +79,8 @@ pub fn main() !u8 {
         }
     };
     defer config.deinit(allocator);
+
+    const stdout = &stdout_writer.interface;
 
     var dirWalker = try walker.DirWalker.init(allocator, cwd);
     defer dirWalker.deinit(allocator);
@@ -121,7 +122,7 @@ pub fn main() !u8 {
                 defer file.close();
                 var file_reader = file.reader(&reader_buffer);
 
-                count += try readTodos(entry.path, &file_reader.interface, config);
+                count += try readTodos(entry.path, &file_reader.interface, stdout, config);
             },
             else => {},
         }
