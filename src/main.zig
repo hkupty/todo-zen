@@ -141,3 +141,86 @@ pub fn main() !u8 {
 
     return 0;
 }
+
+test "hardcoded" {
+    const text =
+        \\Simple file
+        \\//TODO: Some todo
+        \\
+        \\// TODO: Other todo
+        \\normal line
+        \\//HACK: A hack
+        \\//FIX: Followed by a fix
+        \\//TODO: No rest
+        \\Normal line
+        \\//TODO: Many todo
+        \\// TODO(with-context): Many todo
+    ;
+
+    const Position = struct {
+        prefix: []const u8,
+        line: usize,
+        column: usize,
+    };
+
+    const mapping = [_]Position{
+        .{ .prefix = "TODO", .line = 2, .column = 2 },
+        .{ .prefix = "TODO", .line = 4, .column = 3 },
+        .{ .prefix = "HACK", .line = 6, .column = 2 },
+        .{ .prefix = "FIX", .line = 7, .column = 2 },
+        .{ .prefix = "TODO", .line = 8, .column = 2 },
+        .{ .prefix = "TODO", .line = 10, .column = 2 },
+        .{ .prefix = "TODO(with-context)", .line = 11, .column = 3 },
+    };
+
+    var content: std.Io.Reader = .fixed(text);
+
+    // Little extra to be safe
+    var buffer: [text.len + 64]u8 = undefined;
+
+    var prefixes = [_][]const u8{ "TODO", "HACK", "FIX" };
+    var fts = [_][]const u8{};
+
+    var writer: std.Io.Writer = .fixed(&buffer);
+
+    const count = try readTodos("", &content, &writer, .{
+        .prefix = "//",
+        .markers = &prefixes,
+        .maxDepth = 0,
+        .maxSrcDepth = 0,
+        .threshold = 0,
+        .fileTypes = &fts,
+    });
+
+    const captured = writer.buffer[0..writer.end];
+
+    std.testing.expectEqual(7, count) catch |err| {
+        std.debug.print("Captured output:\n{s}\n\n", .{captured});
+        return err;
+    };
+
+    var iter = std.mem.splitScalar(u8, captured, '\n');
+    var ix: usize = 0;
+    while (iter.next()) |position| : (ix += 1) {
+        const testData = mapping[ix];
+        var spl = std.mem.splitScalar(u8, position, ':');
+        _ = spl.next().?;
+
+        const lineStr = spl.next().?;
+        const line = std.fmt.parseInt(usize, lineStr, 10) catch |err| {
+            std.debug.print("Position -> {s} -- Buffer -> {s}\n", .{ position, lineStr });
+            return err;
+        };
+        try std.testing.expectEqual(testData.line, line);
+
+        const colStr = spl.next().?;
+        const col = std.fmt.parseInt(usize, colStr, 10) catch |err| {
+            std.debug.print("Position -> {s} -- Buffer -> {s}\n", .{ position, colStr });
+            return err;
+        };
+        try std.testing.expectEqual(testData.column, col);
+
+        const prefix = spl.next().?;
+        try std.testing.expectEqualStrings(testData.prefix, prefix);
+    }
+}
