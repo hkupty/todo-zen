@@ -15,7 +15,6 @@ pub const DirWalker = struct {
     const StackItem = struct {
         iter: Dir.Iterator,
         dirname_len: usize,
-        hit: bool,
     };
 
     pub const Entry = struct {
@@ -26,7 +25,6 @@ pub const DirWalker = struct {
         basename: [:0]const u8,
         path: [:0]const u8,
         kind: Dir.Entry.Kind,
-        hit: bool,
     };
 
     pub fn init(allocator: Allocator, dir: Dir) !DirWalker {
@@ -35,7 +33,6 @@ pub const DirWalker = struct {
         try stack.append(allocator, .{
             .iter = dir.iterate(),
             .dirname_len = 0,
-            .hit = false,
         });
 
         return .{
@@ -72,7 +69,6 @@ pub const DirWalker = struct {
                     .basename = self.name_buffer.items[dirname_len .. self.name_buffer.items.len - 1 :0],
                     .path = self.name_buffer.items[0 .. self.name_buffer.items.len - 1 :0],
                     .kind = entry.kind,
-                    .hit = top.hit,
                 };
             } else {
                 var item = self.stack.pop().?;
@@ -82,11 +78,6 @@ pub const DirWalker = struct {
             }
         }
         return null;
-    }
-
-    pub inline fn hit(self: *DirWalker) void {
-        var top = &self.stack.items[self.stack.items.len - 1];
-        top.hit = true;
     }
 
     pub fn accept(self: *DirWalker, allocator: Allocator, entry: DirWalker.Entry) !void {
@@ -103,12 +94,10 @@ pub const DirWalker = struct {
         };
 
         errdefer new_dir.close();
-        const top = &self.stack.items[self.stack.items.len - 1];
 
         try self.stack.append(allocator, .{
             .iter = new_dir.iterateAssumeFirstIteration(),
             .dirname_len = self.name_buffer.items.len - 1,
-            .hit = top.hit,
         });
     }
 

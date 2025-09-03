@@ -99,7 +99,7 @@ pub fn main() !u8 {
                 const cur_depth = dirWalker.depth() + 1;
 
                 // Ignore deep paths without src
-                if (config.maxSrcDepth > 0 and cur_depth > config.maxSrcDepth and !entry.hit and std.mem.indexOf(u8, entry.path, "src") == null) {
+                if (config.maxSrcDepth > 0 and cur_depth > config.maxSrcDepth and std.mem.indexOf(u8, entry.path, "src") == null) {
                     break :next;
                 }
                 // Ignore too deep paths
@@ -122,7 +122,6 @@ pub fn main() !u8 {
                     }
                     break :next;
                 }
-                dirWalker.hit();
                 const file = try entry.dir.openFile(entry.basename, .{ .mode = .read_only });
                 defer file.close();
                 var file_reader = file.reader(&reader_buffer);
