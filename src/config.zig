@@ -37,19 +37,34 @@ maxSrcDepth: usize,
 threshold: usize,
 fileTypes: [][]const u8,
 
+// TODO: Avoid booleans and figure out a better way to selectively free
+isDefaultMarker: bool = false,
+isDefaultFiletype: bool = false,
+isDefaultComment: bool = false,
+
+var defaultComment = "//";
+var defaultFts = [_][]const u8{ "zig", "java", "kt", "go" };
+var defaultMarkers = [_][]const u8{ "TODO", "HACK", "FIX", "FIXME" };
+
 const Config = @This();
 
 pub fn deinit(self: *const Config, allocator: std.mem.Allocator) void {
-    for (self.markers) |marker| {
-        allocator.free(marker);
+    if (!self.isDefaultMarker) {
+        for (self.markers) |marker| {
+            allocator.free(marker);
+        }
+        allocator.free(self.markers);
     }
 
-    for (self.fileTypes) |ft| {
-        allocator.free(ft);
+    if (!self.isDefaultFiletype) {
+        for (self.fileTypes) |ft| {
+            allocator.free(ft);
+        }
+        allocator.free(self.fileTypes);
     }
-    allocator.free(self.markers);
-    allocator.free(self.fileTypes);
-    allocator.free(self.prefix);
+    if (!self.isDefaultComment) {
+        allocator.free(self.prefix);
+    }
 }
 
 pub const ConfigError = error{
@@ -124,28 +139,13 @@ pub fn parseConfigFromArgs(allocator: std.mem.Allocator) !Config {
         }
     }
 
-    if (markers == null) {
-        markers = try allocator.alloc([]const u8, variants.len);
-        for (variants, 0..) |marker, ix| {
-            markers.?[ix] = try allocator.dupe(u8, marker);
-        }
-    }
-
-    if (filetypes == null) {
-        filetypes = try allocator.alloc([]const u8, extensions.len);
-        for (extensions, 0..) |ft, ix| {
-            filetypes.?[ix] = try allocator.dupe(u8, ft);
-        }
-    }
-
-    if (prefix == null) {
-        prefix = try allocator.dupe(u8, "//");
-    }
-
     return .{
-        .markers = markers.?,
-        .fileTypes = filetypes.?,
-        .prefix = prefix.?,
+        .markers = markers orelse &defaultMarkers,
+        .isDefaultMarker = markers == null,
+        .fileTypes = filetypes orelse &defaultFts,
+        .isDefaultFiletype = filetypes == null,
+        .prefix = prefix orelse defaultComment,
+        .isDefaultComment = prefix == null,
         .maxDepth = maxDepth orelse 8,
         .maxSrcDepth = maxSrcDepth orelse 3,
         .threshold = threshold orelse 0,
