@@ -89,6 +89,7 @@ pub const DirWalker = struct {
         var new_dir = entry.dir.openDir(entry.basename, .{ .iterate = true }) catch |err| {
             switch (err) {
                 error.NameTooLong => unreachable, // no path sep in base.name
+                error.AccessDenied => return,
                 else => |e| return e,
             }
         };
