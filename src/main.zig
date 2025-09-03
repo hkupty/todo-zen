@@ -17,9 +17,14 @@ fn readTodos(identifier: []const u8, reader: *std.Io.Reader, writer: *std.Io.Wri
     var lineno: usize = 1;
 
     lines: while (true) : (lineno += 1) {
-        const line = reader.peekDelimiterInclusive('\n') catch |err| {
-            if (err == error.EndOfStream) break;
-            return err;
+        const line = reader.peekDelimiterInclusive('\n') catch |err| x: {
+            if (err == error.EndOfStream) {
+                const line = reader.buffer[reader.seek..reader.end];
+                if (line.len > 0) break :x line;
+                break;
+            } else {
+                return err;
+            }
         };
 
         const prefixIndex: ?usize = sz: switch (config.prefix.len) {
